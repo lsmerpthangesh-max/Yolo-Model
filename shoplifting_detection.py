@@ -15,7 +15,7 @@ from config.parameters import cls0_rect_color, cls1_rect_color, conf_color, stat
 # -----------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-model_path = os.path.join(BASE_DIR, "configs", "shoplifting_weights.pt")
+mymodel=YOLO("configs/shoplifting_wights.pt")
 video_path = os.path.join(BASE_DIR, "res", "inout1.mp4")
 
 # Debug check
