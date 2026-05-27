@@ -3,40 +3,72 @@ import numpy as np
 import imutils
 import cv2
 import streamlit as st
+import os
+import time
 
 # import parameters
 from config.parameters import WIDTH, start_status, shoplifting_status, not_shoplifting_status
 from config.parameters import cls0_rect_color, cls1_rect_color, conf_color, status_color
 
-input_path = "res/inout1.mp4"
+# -----------------------------
+# ✅ SAFE PATH HANDLING
+# -----------------------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# ✅ FIXED MODEL PATH (IMPORTANT)
-model = YOLO("configs/shoplifting_weights.pt")
+model_path = os.path.join(BASE_DIR, "configs", "shoplifting_weights.pt")
+video_path = os.path.join(BASE_DIR, "res", "inout1.mp4")
 
-cap = cv2.VideoCapture(input_path)
+# Debug check
+st.write("Model path:", model_path)
+st.write("Model exists:", os.path.exists(model_path))
 
-# ✅ Streamlit UI
-st.title("Shoplifting Detection System")
+if not os.path.exists(model_path):
+    st.error("❌ Model file NOT FOUND. Check configs folder.")
+    st.stop()
+
+# -----------------------------
+# ✅ LOAD MODEL
+# -----------------------------
+model = YOLO(model_path)
+
+# -----------------------------
+# ✅ LOAD VIDEO
+# -----------------------------
+cap = cv2.VideoCapture(video_path)
+
+if not cap.isOpened():
+    st.error("❌ Video not found or cannot open")
+    st.stop()
+
+# -----------------------------
+# ✅ STREAMLIT UI
+# -----------------------------
+st.title("🛒 Shoplifting Detection System")
 frame_placeholder = st.empty()
 
-# ✅ ADD FRAME SKIP (VERY IMPORTANT)
+# -----------------------------
+# ✅ PERFORMANCE SETTINGS
+# -----------------------------
 frame_count = 0
 
+# -----------------------------
+# ✅ MAIN LOOP
+# -----------------------------
 while cap.isOpened():
 
     ret, frame = cap.read()
     if not ret:
         break
 
-    # ✅ SKIP FRAMES (reduces lag)
+    # 🔥 SKIP FRAMES (IMPORTANT FOR SMOOTHNESS)
     frame_count += 1
     if frame_count % 3 != 0:
         continue
 
-    # ✅ RESIZE SMALLER (faster)
+    # ⚡ RESIZE (FASTER)
     frame = imutils.resize(frame, width=480)
 
-    # ✅ FAST YOLO INFERENCE
+    # 🤖 YOLO INFERENCE
     results = model(frame, verbose=False)
 
     status = start_status
@@ -76,14 +108,17 @@ while cap.isOpened():
 
                 status = not_shoplifting_status
 
-    # ✅ STATUS TEXT
+    # 📊 STATUS TEXT
     cv2.putText(frame, status, (10, 25),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, status_color, 2)
 
-    # ✅ Convert to RGB for Streamlit
+    # 🎨 Convert to RGB
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    # ✅ Display frame
+    # 🖥️ Display in Streamlit
     frame_placeholder.image(frame, channels="RGB")
+
+    # ⏱️ CONTROL PLAYBACK SPEED (IMPORTANT)
+    time.sleep(0.03)
 
 cap.release()
