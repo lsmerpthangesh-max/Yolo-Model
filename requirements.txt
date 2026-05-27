@@ -1,6 +1,7 @@
 ultralytics>=8.2.0
 numpy>=1.26.0
 opencv-python-headless
+imutils
 pillow
 pyyaml
 requests
