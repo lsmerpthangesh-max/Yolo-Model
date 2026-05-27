@@ -1,89 +1,64 @@
-from ultralytics import YOLO
-import numpy as np
-import imutils
-import cv2
 import streamlit as st
+import cv2
+import numpy as np
+from ultralytics import YOLO
+import os
 
-# import parameters
-from config.parameters import WIDTH, start_status, shoplifting_status, not_shoplifting_status
-from config.parameters import cls0_rect_color, cls1_rect_color, conf_color, status_color
+st.title("🛒 Shoplifting Detection System")
 
-input_path = "res/inout1.mp4"
+# -----------------------------
+# Load Model (FIXED PATH)
+# -----------------------------
+MODEL_PATH = "configs/shoplifting_weights.pt"
 
-# ✅ FIXED MODEL PATH (IMPORTANT)
-mymodel=YOLO("configs/shoplifting_wights.pt")
+if not os.path.exists(MODEL_PATH):
+    st.error(f"❌ Model file not found at: {MODEL_PATH}")
+    st.stop()
 
-cap = cv2.VideoCapture(input_path)
+model = YOLO(MODEL_PATH)
 
-# ✅ Streamlit UI
-st.title("Shoplifting Detection System")
-frame_placeholder = st.empty()
+# -----------------------------
+# Upload Video
+# -----------------------------
+uploaded_file = st.file_uploader("📂 Upload a video", type=["mp4", "avi", "mov"])
 
-# ✅ ADD FRAME SKIP (VERY IMPORTANT)
-frame_count = 0
+if uploaded_file is not None:
+    # Save temp video
+    temp_video_path = "temp_video.mp4"
+    with open(temp_video_path, "wb") as f:
+        f.write(uploaded_file.read())
 
-while cap.isOpened():
+    cap = cv2.VideoCapture(temp_video_path)
 
-    ret, frame = cap.read()
-    if not ret:
-        break
+    if not cap.isOpened():
+        st.error("❌ Cannot open video")
+        st.stop()
 
-    # ✅ SKIP FRAMES (reduces lag)
-    frame_count += 1
-    if frame_count % 3 != 0:
-        continue
+    stframe = st.empty()
 
-    # ✅ RESIZE SMALLER (faster)
-    frame = imutils.resize(frame, width=480)
+    # -----------------------------
+    # Process Video Frame-by-Frame
+    # -----------------------------
+    while cap.isOpened():
+        ret, frame = cap.read()
 
-    # ✅ FAST YOLO INFERENCE
-    results = model(frame, verbose=False)
+        if not ret:
+            break
 
-    status = start_status
+        # YOLO prediction
+        results = model(frame)
 
-    if len(results[0].boxes) > 0:
-        boxes = results[0].boxes
+        # Draw results
+        annotated_frame = results[0].plot()
 
-        xyxy = boxes.xyxy.cpu().numpy().astype(int)
-        confs = boxes.conf.cpu().numpy()
-        classes = boxes.cls.cpu().numpy()
+        # Convert BGR → RGB
+        annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
 
-        for (x1, y1, x2, y2), conf, clas in zip(xyxy, confs, classes):
+        # Display in Streamlit
+        stframe.image(annotated_frame, channels="RGB")
 
-            w = x2 - x1
-            h = y2 - y1
+    cap.release()
+    st.success("✅ Video processing completed")
 
-            if clas == 1:
-                # 🔴 SHOPLIFTING
-                cv2.rectangle(frame, (x1, y1), (x2, y2), cls1_rect_color, 2)
-
-                center_x = int(x1 + w / 2)
-                cv2.circle(frame, (center_x, y1), 6, (0, 0, 255), 6)
-
-                text = f"{conf*100:.2f}%"
-                cv2.putText(frame, text, (x1, y1 - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, conf_color, 2)
-
-                status = shoplifting_status
-
-            elif clas == 0 and conf > 0.5:
-                # 🟢 NORMAL
-                cv2.rectangle(frame, (x1, y1), (x2, y2), cls0_rect_color, 1)
-
-                text = f"{conf*100:.2f}%"
-                cv2.putText(frame, text, (x1, y1 - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, conf_color, 2)
-
-                status = not_shoplifting_status
-
-    # ✅ STATUS TEXT
-    cv2.putText(frame, status, (10, 25),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, status_color, 2)
-
-    # ✅ Convert to RGB for Streamlit
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-    # ✅ Display frame
-    frame_placeholder.image(frame, channels="RGB")
-
-cap.release()
+else:
+    st.info("⬆️ Please upload a video to start detection")
