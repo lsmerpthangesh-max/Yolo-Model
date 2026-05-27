@@ -10,11 +10,11 @@ from config.parameters import WIDTH,start_status,shoplifting_status,not_shoplift
 from config.parameters import cls0_rect_color,cls1_rect_color,conf_color,status_color
 from config.parameters import quit_key,frame_name
 
-input_path="res\inout1.mp4"
+input_path="res/inout1.mp4"
 output_path=""
 
 #model
-mymodel = YOLO("configs/shoplifting_weights.pt")
+mymodel=YOLO("configs/shoplifting_weights.pt")
 
 # input fils
 cap = cv2.VideoCapture(input_path)  
