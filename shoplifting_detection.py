@@ -14,7 +14,7 @@ input_path="res/inout1.mp4"
 output_path=""
 
 # model
-mymodel = YOLO("configs/shoplifting_weights.pt")   # ✅ FIXED TYPO
+mymodel=YOLO("configs/shoplifting_wights.pt")
 
 # input file
 cap = cv2.VideoCapture(input_path)  
